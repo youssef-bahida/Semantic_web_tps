@@ -4,8 +4,21 @@ Bienvenue dans le portail des travaux pratiques du module **Web sémantique**.
 
 ## 📚 Liste des TP
 
-### TP1 — Fréquences des mots d'un texte et ses collocatifs
-Analyse des mots d'un texte, calcul de leurs fréquences et étude des mots associés.
+## TP1 — Text Analyzer
+
+An interactive text analysis application built with **Python, Streamlit, and Plotly**.
+
+**Features**
+- Word frequency analysis
+- Vocabulary statistics
+- Interactive visualizations
+- Collocation analysis
+- Export results to TXT and CSV
+
+🚀 **[Launch the Text Analyzer]([https://yb-textanalyzer.streamlit.app/)**
+
+📂 **[View the TP1 source code](https://github.com/youssef-bahida/Semantic_web_tps/tree/main/TP1)**
+
 
 ### TP2 — Conversion d'un HTML en XML, fréquences des mots et collocatifs
 Conversion de documents HTML en XML et analyse des fréquences des mots.
