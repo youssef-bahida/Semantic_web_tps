@@ -4,10 +4,10 @@ Bienvenue dans le portail des travaux pratiques du module **Web sémantique**.
 
 ## 📚 Liste des TP
 
-### TP1 — Fréquences des mots d'un texte et ses conjoints
+### TP1 — Fréquences des mots d'un texte et ses collocatifs
 Analyse des mots d'un texte, calcul de leurs fréquences et étude des mots associés.
 
-### TP2 — Conversion d'un HTML en XML, fréquences des mots et conjoints
+### TP2 — Conversion d'un HTML en XML, fréquences des mots et collocatifs
 Conversion de documents HTML en XML et analyse des fréquences des mots.
 
 ### TP3 — RDF en tableau de triplets
