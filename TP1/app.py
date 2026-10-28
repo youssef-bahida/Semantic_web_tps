@@ -1,6 +1,7 @@
 
 import re
 import io
+import csv
 from collections import Counter
 
 import streamlit as st
@@ -40,6 +41,102 @@ st.markdown("""
 
 
 # --------------------------------------------------
+# Embedded example text (no external file required)
+# --------------------------------------------------
+
+EXAMPLE_TEXT = """
+The Semantic Web is an extension of the World Wide Web that gives
+data a well-defined meaning, making it easier for computers and
+people to work together. Traditional web pages are mainly designed
+for humans to read, while the Semantic Web aims to describe
+information in a structured way so that software can interpret
+relationships between concepts. Technologies such as RDF, RDFS,
+OWL, and SPARQL help represent, organize, and query linked data.
+
+Imagine a university that publishes information about students,
+courses, teachers, research projects, and laboratories. If these
+resources are described only in separate documents, it may be
+difficult to discover how they are connected. A semantic model can
+identify each resource and describe relationships such as a student
+enrolling in a course, a teacher supervising a project, or a
+laboratory belonging to a department. These explicit relationships
+help applications retrieve relevant information more accurately.
+
+Linked Data encourages publishers to use identifiers for resources,
+provide useful descriptions, and connect related datasets. When
+different organizations follow compatible principles, their data
+can be combined to answer questions that no single dataset could
+answer alone. For example, a researcher might connect university
+publications with author profiles, funding information, and
+scientific datasets. The result is a richer view of a research topic
+and its surrounding context.
+
+Text analysis can also benefit from structured knowledge. A text
+analyzer may count words, identify frequent vocabulary, and explore
+collocations, which are words that appear near a target word. If
+the target word is data, nearby terms such as linked, semantic,
+structured, or query can reveal the themes of a document. Frequency
+statistics provide a useful overview, while collocation analysis
+helps show how words are used in context. These methods do not fully
+understand meaning, but they can support linguistic exploration
+and information discovery.
+
+Semantic technologies are useful in digital libraries, e-government,
+healthcare information systems, scientific research, and knowledge
+graphs. However, building reliable semantic applications requires
+careful attention to data quality, shared vocabularies, privacy,
+and interoperability. Different systems may use different terms
+for the same concept, and poorly maintained datasets can create
+misleading connections. Clear metadata and consistent identifiers
+make integration more dependable.
+
+Artificial intelligence can complement Semantic Web technologies.
+Machine learning can identify patterns in large collections of
+documents, while knowledge graphs represent entities and their
+relationships explicitly. Combining statistical methods with
+structured knowledge can improve search, recommendation, and
+question-answering systems. For example, a search engine may use
+word frequencies to identify important terms and a knowledge graph
+to understand how people, places, organizations, and topics are
+related.
+
+The goal is not simply to publish more information, but to make
+information easier to discover, connect, and reuse. When data is
+described consistently and relationships are made explicit, both
+people and software can navigate complex information more
+effectively. The Semantic Web therefore offers a foundation for
+more interoperable applications, while text analysis provides
+practical techniques for exploring the language and structure
+of documents.
+
+Another important aspect of text analysis is vocabulary
+distribution. Some words appear frequently, while others occur
+only once. Studying these differences can help readers understand
+the diversity of a text and identify its central themes. Researchers
+can compare documents, examine terminology, and investigate how
+the use of words changes across different contexts.
+
+Collocations provide another perspective on language. Words that
+regularly appear near one another may indicate meaningful
+expressions, recurring topics, or relationships within a document.
+For example, the words semantic and web often appear together
+when a text discusses linked data and machine-readable knowledge.
+The size of the context window affects which neighboring words are
+counted, so researchers should choose a suitable window for their
+analysis and interpret results carefully.
+
+A useful text analyzer combines clear statistics with interactive
+visualizations. Bar charts make frequent words easier to compare,
+while distribution charts show how vocabulary is spread across
+frequency groups. Tables allow users to inspect individual values,
+and downloadable files make results easier to reuse in reports or
+other applications. These features help transform an ordinary
+text document into a source of information that can be explored
+systematically.
+"""
+
+
+# --------------------------------------------------
 # Text analysis functions
 # --------------------------------------------------
 
@@ -49,13 +146,15 @@ def tokenize(text):
 
 
 def analyze_frequencies(words):
+    """Count the occurrences of each word."""
     return Counter(words)
 
 
 def analyze_collocations(words, target, window_size):
-    """Count words occurring before and after the target word."""
+    """Count words appearing before and after a target word."""
     left = Counter()
     right = Counter()
+
     positions = [
         i for i, word in enumerate(words)
         if word == target
@@ -72,6 +171,7 @@ def analyze_collocations(words, target, window_size):
 
 
 def make_frequency_text(frequencies):
+    """Generate a downloadable TXT report."""
     output = io.StringIO()
     output.write("WORD FREQUENCIES\n")
     output.write("================\n\n")
@@ -82,11 +182,24 @@ def make_frequency_text(frequencies):
     return output.getvalue()
 
 
+def make_frequency_csv(frequencies):
+    """Generate a properly escaped CSV report."""
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Word", "Frequency"])
+
+    for word, count in frequencies.most_common():
+        writer.writerow([word, count])
+
+    return output.getvalue()
+
+
 # --------------------------------------------------
 # Header
 # --------------------------------------------------
 
 st.title("📊 Text Analyzer")
+
 st.caption(
     "Explore word frequencies, vocabulary and collocations "
     "through interactive visualizations."
@@ -94,53 +207,63 @@ st.caption(
 
 
 # --------------------------------------------------
-# Compact input area
+# Text input
 # --------------------------------------------------
 
-with st.container(border=True):
-    st.subheader("📝 Your text")
+st.subheader("📝 Your text")
 
-    source_col, upload_col = st.columns([1, 2])
+source = st.radio(
+    "Choose your text source",
+    ["Use example text", "Upload a .txt file"],
+    horizontal=True,
+)
 
-    with source_col:
-        source = st.radio(
-            "Text source",
-            ["Upload a .txt file", "Use example.txt"],
-            horizontal=False,
+uploaded_file = None
+
+if source == "Use example text":
+
+    st.success(
+        "The example text is built into this application. "
+        "No external file is required."
+    )
+
+    # Display the text as a readable TXT-style preview.
+    with st.expander("📄 View example.txt", expanded=True):
+        st.text_area(
+            "Example text",
+            value=EXAMPLE_TEXT.strip(),
+            height=260,
+            disabled=True,
+            label_visibility="collapsed",
         )
 
-    with upload_col:
-        uploaded_file = None
+    # Download the embedded example as a real .txt file.
+    st.download_button(
+        label="⬇️ Download example.txt",
+        data=EXAMPLE_TEXT.strip() + "\n",
+        file_name="example.txt",
+        mime="text/plain",
+    )
 
-        if source == "Upload a .txt file":
-            uploaded_file = st.file_uploader(
-                "Choose a text file",
-                type=["txt"],
-                label_visibility="collapsed",
-            )
-        else:
-            st.info(
-                "The app will load example.txt from the same "
-                "folder as app.py."
-            )
+    text = EXAMPLE_TEXT
 
-text = ""
+else:
+    uploaded_file = st.file_uploader(
+        "Choose a text file",
+        type=["txt"],
+    )
 
-if source == "Upload a .txt file":
+    text = ""
+
     if uploaded_file is not None:
         try:
             text = uploaded_file.getvalue().decode("utf-8-sig")
         except UnicodeDecodeError:
-            st.error("Unable to read this file as UTF-8 text.")
-else:
-    try:
-        with open("example.txt", "r", encoding="utf-8-sig") as file:
-            text = file.read()
-    except FileNotFoundError:
-        st.warning(
-            "example.txt was not found. Add it beside app.py "
-            "or choose the upload option."
-        )
+            st.error(
+                "Unable to read this file as UTF-8. "
+                "Please upload a UTF-8 encoded text file."
+            )
+
 
 if not text.strip():
     st.info("Load a text file to start the analysis.")
@@ -153,34 +276,42 @@ if not text.strip():
 
 words = tokenize(text)
 frequencies = analyze_frequencies(words)
-vocabulary_size = len(frequencies)
-unique_once = sum(1 for count in frequencies.values() if count == 1)
-top_words = frequencies.most_common(20)
 
 if not words:
     st.warning("No words were detected in this text.")
     st.stop()
+
+total_words = len(words)
+vocabulary_size = len(frequencies)
+
+unique_once = sum(
+    1 for count in frequencies.values()
+    if count == 1
+)
+
+top_words = frequencies.most_common(20)
 
 
 # --------------------------------------------------
 # Summary metrics
 # --------------------------------------------------
 
+st.divider()
 st.subheader("📌 Overview")
 
 m1, m2, m3, m4 = st.columns(4)
 
-m1.metric("Total words", f"{len(words):,}")
+m1.metric("Total words", f"{total_words:,}")
 m2.metric("Unique words", f"{vocabulary_size:,}")
 m3.metric("Words appearing once", f"{unique_once:,}")
 m4.metric(
     "Vocabulary ratio",
-    f"{vocabulary_size / len(words) * 100:.1f}%"
+    f"{vocabulary_size / total_words * 100:.1f}%",
 )
 
 
 # --------------------------------------------------
-# Tabs keep the page compact
+# Tabs
 # --------------------------------------------------
 
 tab_overview, tab_collocations, tab_data = st.tabs([
@@ -195,6 +326,7 @@ tab_overview, tab_collocations, tab_data = st.tabs([
 # --------------------------------------------------
 
 with tab_overview:
+
     left_panel, right_panel = st.columns([3, 2], gap="large")
 
     with left_panel:
@@ -202,7 +334,7 @@ with tab_overview:
 
         max_words = st.slider(
             "Words to display",
-            min_value=5,
+            min_value=1,
             max_value=min(30, vocabulary_size),
             value=min(15, vocabulary_size),
         )
@@ -232,7 +364,11 @@ with tab_overview:
             xaxis_title="Number of occurrences",
             coloraxis_showscale=False,
         )
-        fig.update_traces(textposition="outside", cliponaxis=False)
+
+        fig.update_traces(
+            textposition="outside",
+            cliponaxis=False,
+        )
 
         st.plotly_chart(fig, use_container_width=True)
 
@@ -240,8 +376,12 @@ with tab_overview:
         st.subheader("Vocabulary distribution")
 
         distribution = Counter(frequencies.values())
+
         distribution_data = [
-            {"Occurrences per word": str(count), "Number of words": amount}
+            {
+                "Occurrences per word": str(count),
+                "Number of words": amount,
+            }
             for count, amount in sorted(distribution.items())
         ]
 
@@ -258,6 +398,7 @@ with tab_overview:
             margin=dict(l=5, r=5, t=20, b=10),
             legend_title_text="Word frequency",
         )
+
         fig_dist.update_traces(
             textposition="inside",
             textinfo="percent",
@@ -276,6 +417,7 @@ with tab_overview:
 # --------------------------------------------------
 
 with tab_collocations:
+
     st.subheader("Explore words around a target")
 
     all_words = sorted(frequencies.keys())
@@ -283,6 +425,7 @@ with tab_collocations:
     settings_col, result_col = st.columns([1, 2], gap="large")
 
     with settings_col:
+
         target = st.selectbox(
             "Target word",
             options=all_words,
@@ -308,14 +451,18 @@ with tab_collocations:
         )
 
     left_counts, right_counts, occurrences = analyze_collocations(
-        words, target, window_size
+        words,
+        target,
+        window_size,
     )
 
     with result_col:
+
         st.metric("Target word occurrences", occurrences)
 
         if occurrences == 0:
             st.info("The selected word was not found.")
+
         else:
             left_top = left_counts.most_common(top_collocations)
             right_top = right_counts.most_common(top_collocations)
@@ -377,6 +524,7 @@ with tab_collocations:
 # --------------------------------------------------
 
 with tab_data:
+
     st.subheader("Word frequency table")
 
     search_word = st.text_input(
@@ -398,7 +546,7 @@ with tab_data:
     )
 
     st.download_button(
-        "⬇️ Download all frequencies (.txt)",
+        label="⬇️ Download all frequencies (.txt)",
         data=make_frequency_text(frequencies),
         file_name="word_frequencies.txt",
         mime="text/plain",
@@ -406,20 +554,18 @@ with tab_data:
     )
 
     st.download_button(
-        "⬇️ Download frequencies (.csv)",
-        data=(
-            "Word,Frequency\n"
-            + "\n".join(
-                f'"{word.replace(chr(34), chr(34) * 2)}",{count}'
-                for word, count in frequencies.most_common()
-            )
-        ),
+        label="⬇️ Download frequencies (.csv)",
+        data=make_frequency_csv(frequencies),
         file_name="word_frequencies.csv",
         mime="text/csv",
         use_container_width=True,
     )
 
 
-st.divider()
-st.caption("Text Analyzer · Python + Streamlit + Plotly")
+# --------------------------------------------------
+# Footer
+# --------------------------------------------------
 
+st.divider()
+
+st.caption("Text Analyzer · Python + Streamlit + Plotly")
