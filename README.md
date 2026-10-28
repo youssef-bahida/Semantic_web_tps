@@ -15,7 +15,7 @@ An interactive text analysis application built with **Python, Streamlit, and Plo
 - Collocation analysis
 - Export results to TXT and CSV
 
-🚀 **[Launch the Text Analyzer]([https://yb-textanalyzer.streamlit.app/)**
+🚀 **[Launch the Text Analyzer](https://yb-textanalyzer.streamlit.app/)**
 
 📂 **[View the TP1 source code](https://github.com/youssef-bahida/Semantic_web_tps/tree/main/TP1)**
 
