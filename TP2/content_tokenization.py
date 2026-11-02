@@ -1,141 +1,182 @@
 
 import re
+from collections import Counter, defaultdict
 
-from collections import Counter
-from stopwordsiso import stopwords
+import stopwordsiso
 from wordfreq import zipf_frequency
 
+
+# ==========================================
+# 1. TOKENIZATION
+# ==========================================
 
 def tokenize(text):
     """
     Découpe un texte en mots.
-
-    - Convertit en minuscules.
-    - Élimine les nombres.
-    - Ignore les caractères spéciaux.
-    - Conserve les accents et les apostrophes internes.
+    Conserve les accents et les apostrophes.
     """
 
     return re.findall(
-        r"[^\W\d_]+(?:['’][^\W\d_]+)?",
+        r"[^\W\d_]+(?:['’][^\W\d_]+)*",
         text.lower(),
         flags=re.UNICODE
     )
 
 
-def get_top_words(content, language="fr"):
+# ==========================================
+# 2. FILTERING
+# ==========================================
+
+def filter_words(words, language):
     """
-    Calcule les 10 mots les plus fréquents.
-
-    Élimine :
-    - Les mots vides (stopwords).
-    - Les mots trop peu fréquents dans la langue choisie.
+    Supprime les mots vides et les mots
+    qui ne semblent pas appartenir à la langue choisie.
     """
 
-    words = tokenize(content)
+    stop_words = stopwordsiso.stopwords(language)
 
-    # Récupérer les mots vides de la langue
-    stop_words = stopwords(language)
-
-    useful_words = []
+    filtered = []
 
     for word in words:
 
-        # Ignorer les mots vides
         if word in stop_words:
             continue
 
-        # Filtrer les mots peu plausibles dans la langue
+        # Éliminer les mots trop courts
+        if len(word) < 2:
+            continue
+
+        # Vérifier que le mot existe suffisamment
+        # dans la langue sélectionnée
         if zipf_frequency(word, language) < 2:
             continue
 
-        useful_words.append(word)
+        filtered.append(word)
 
-    # Calculer les fréquences
-    frequencies = Counter(useful_words)
-
-    # Retourner les 10 premiers
-    return frequencies.most_common(10)
+    return filtered
 
 
-def get_collocations(content, keywords, language="fr"):
+# ==========================================
+# 3. TOP 10 WORD FREQUENCIES
+# ==========================================
+
+def get_top_words(text, language="fr", limit=10):
     """
-    Recherche les collocatifs des mots-clés.
-
-    Distance :
-        5 mots à gauche.
-        5 mots à droite.
-
-    Retourne pour chaque mot-clé :
-        left  : collocatifs à gauche.
-        right : collocatifs à droite.
-        total : total des occurrences.
+    Retourne les mots les plus fréquents.
+    Résultat : dictionnaire {mot: fréquence}.
     """
 
-    words = tokenize(content)
+    words = tokenize(text)
 
-    stop_words = stopwords(language)
+    filtered = filter_words(words, language)
+
+    frequencies = Counter(filtered)
+
+    return dict(frequencies.most_common(limit))
+
+
+# ==========================================
+# 4. KEYWORD COLLOCATIONS
+# ==========================================
+
+def find_collocations(text, keywords, language="fr", window=5):
+    """
+    Recherche les collocatifs autour de chaque mot-clé.
+
+    window = 5 :
+    - 5 mots à gauche
+    - 5 mots à droite
+
+    Résultat :
+    {
+        "mot-clé": {
+            "collocatif": {
+                "left": 2,
+                "right": 3,
+                "total": 5
+            }
+        }
+    }
+    """
+
+    words = tokenize(text)
+
+    # Filtrer les mots non pertinents
+    stop_words = stopwordsiso.stopwords(language)
 
     results = {}
 
     for keyword in keywords:
 
-        # Découper le mot-clé
-        keyword_words = tokenize(keyword)
+        keyword = keyword.strip().lower()
 
-        if not keyword_words:
+        keyword_tokens = tokenize(keyword)
+
+        if len(keyword_tokens) != 1:
             continue
 
-        keyword_size = len(keyword_words)
+        target = keyword_tokens[0]
 
-        left_counter = Counter()
-        right_counter = Counter()
+        if target not in words:
+            results[keyword] = {}
+            continue
+
+        collocations = defaultdict(
+            lambda: {
+                "left": 0,
+                "right": 0,
+                "total": 0
+            }
+        )
 
         # Parcourir le texte
-        for i in range(
-            len(words) - keyword_size + 1
-        ):
+        for index, word in enumerate(words):
 
-            # Vérifier la présence du mot-clé
-            if words[i:i + keyword_size] == keyword_words:
+            if word != target:
+                continue
 
-                # Cinq mots avant le mot-clé
-                left_words = words[
-                    max(0, i - 5):i
-                ]
+            # Fenêtre à gauche
+            left_start = max(0, index - window)
 
-                # Cinq mots après le mot-clé
-                right_words = words[
-                    i + keyword_size:
-                    i + keyword_size + 5
-                ]
+            for position in range(left_start, index):
 
-                # Comptabiliser les collocatifs à gauche
-                for word in left_words:
+                collocate = words[position]
 
-                    if (
-                        word not in stop_words
-                        and zipf_frequency(word, language) >= 2
-                    ):
-                        left_counter[word] += 1
+                if collocate == target or collocate in stop_words:
+                    continue
 
-                # Comptabiliser les collocatifs à droite
-                for word in right_words:
+                if len(collocate) < 2:
+                    continue
 
-                    if (
-                        word not in stop_words
-                        and zipf_frequency(word, language) >= 2
-                    ):
-                        right_counter[word] += 1
+                collocations[collocate]["left"] += 1
+                collocations[collocate]["total"] += 1
 
-        # Additionner les occurrences gauche et droite
-        total_counter = left_counter + right_counter
+            # Fenêtre à droite
+            right_end = min(len(words), index + window + 1)
 
-        results[keyword] = {
-            "left": left_counter,
-            "right": right_counter,
-            "total": total_counter
-        }
+            for position in range(index + 1, right_end):
+
+                collocate = words[position]
+
+                if collocate == target or collocate in stop_words:
+                    continue
+
+                if len(collocate) < 2:
+                    continue
+
+                collocations[collocate]["right"] += 1
+                collocations[collocate]["total"] += 1
+
+        # Trier par fréquence totale
+        sorted_collocations = dict(
+            sorted(
+                collocations.items(),
+                key=lambda item: item[1]["total"],
+                reverse=True
+            )
+        )
+
+        results[keyword] = sorted_collocations
 
     return results
 

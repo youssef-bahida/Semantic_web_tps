@@ -1,157 +1,130 @@
 
-from xml.etree import ElementTree as ET
+import xml.etree.ElementTree as ET
 from xml.dom import minidom
 
 
-def generate_xml(metadata, content, frequencies, collocations):
+def generate_xml(metadata, content, top_words, collocations, url):
     """
-    Génère un fichier XML à partir des résultats de l'analyse.
-
-    Paramètres :
-        metadata     : informations de l'article
-        content      : contenu principal
-        frequencies  : 10 mots les plus fréquents
-        collocations : résultats des collocatifs
-
-    Retour :
-        Document XML encodé en UTF-8.
+    Génère un document XML contenant :
+    - Les métadonnées
+    - Le contenu de l'article
+    - Les 10 mots les plus fréquents
+    - Les collocatifs des mots-clés
     """
 
-    # Élément racine
     root = ET.Element("article")
 
-    # =====================================
-    # 1. MÉTADONNÉES
-    # =====================================
+    # ======================================
+    # MÉTADONNÉES
+    # ======================================
 
-    metadata_element = ET.SubElement(
-        root,
-        "metadata"
+    meta = ET.SubElement(root, "metadata")
+
+    ET.SubElement(meta, "title").text = str(
+        metadata.get("title") or ""
     )
 
-    fields = [
-        "title",
-        "link",
-        "description",
-        "author",
-        "date"
-    ]
+    ET.SubElement(meta, "url").text = str(url or "")
 
-    for field in fields:
-
-        element = ET.SubElement(
-            metadata_element,
-            field
-        )
-
-        element.text = metadata.get(field, "") or ""
-
-    # =====================================
-    # 2. MOTS-CLÉS
-    # =====================================
-
-    keywords_element = ET.SubElement(
-        metadata_element,
-        "keywords"
+    ET.SubElement(meta, "description").text = str(
+        metadata.get("description") or ""
     )
 
-    for keyword in metadata.get("keywords", []):
+    ET.SubElement(meta, "author").text = str(
+        metadata.get("author") or ""
+    )
 
-        element = ET.SubElement(
+    ET.SubElement(meta, "publication_date").text = str(
+        metadata.get("date") or ""
+    )
+
+    keywords_element = ET.SubElement(meta, "keywords")
+
+    keywords = metadata.get("keywords", [])
+
+    if isinstance(keywords, str):
+        keywords = [
+            word.strip()
+            for word in keywords.split(",")
+            if word.strip()
+        ]
+
+    for keyword in keywords:
+        ET.SubElement(
             keywords_element,
             "keyword"
-        )
+        ).text = str(keyword)
 
-        element.text = keyword
+    # ======================================
+    # CONTENU
+    # ======================================
 
-    # =====================================
-    # 3. CONTENU DE L'ARTICLE
-    # =====================================
-
-    content_element = ET.SubElement(
-        root,
-        "content"
-    )
-
+    content_element = ET.SubElement(root, "content")
     content_element.text = content
 
-    # =====================================
-    # 4. FRÉQUENCES DES MOTS
-    # =====================================
+    # ======================================
+    # FRÉQUENCES
+    # ======================================
 
-    frequencies_element = ET.SubElement(
+    frequencies = ET.SubElement(
         root,
-        "frequencies"
+        "word_frequencies"
     )
 
-    for word, count in frequencies:
+    if isinstance(top_words, dict):
+        items = top_words.items()
+    else:
+        items = top_words
+
+    for word, count in items:
 
         ET.SubElement(
-            frequencies_element,
+            frequencies,
             "word",
-            {
-                "value": word,
-                "count": str(count)
-            }
+            value=str(word),
+            count=str(count)
         )
 
-    # =====================================
-    # 5. COLLOCATIFS
-    # =====================================
+    # ======================================
+    # COLLOCATIFS
+    # ======================================
 
     collocations_element = ET.SubElement(
         root,
         "collocations"
     )
 
-    for keyword, data in collocations.items():
+    for keyword, values in collocations.items():
 
         keyword_element = ET.SubElement(
             collocations_element,
             "keyword",
-            name=keyword
+            value=str(keyword)
         )
 
-        # Trois directions
-        for direction in [
-            "left",
-            "right",
-            "total"
-        ]:
+        for word, counts in values.items():
 
-            direction_element = ET.SubElement(
+            ET.SubElement(
                 keyword_element,
-                direction
+                "collocate",
+                value=str(word),
+                left=str(counts.get("left", 0)),
+                right=str(counts.get("right", 0)),
+                total=str(counts.get("total", 0))
             )
 
-            # Ajouter les collocatifs
-            for word, count in data[direction].most_common():
-
-                ET.SubElement(
-                    direction_element,
-                    "word",
-                    {
-                        "value": word,
-                        "count": str(count)
-                    }
-                )
-
-    # =====================================
-    # 6. FORMATER LE XML
-    # =====================================
+    # ======================================
+    # FORMATAGE XML
+    # ======================================
 
     xml_bytes = ET.tostring(
         root,
         encoding="utf-8"
     )
 
-    # Rendre le document lisible
     pretty_xml = minidom.parseString(
         xml_bytes
-    ).toprettyxml(
-        indent="    ",
-        encoding="UTF-8"
-    )
+    ).toprettyxml(indent="    ", encoding="utf-8")
 
-    return pretty_xml
+    return pretty_xml.decode("utf-8")
 
